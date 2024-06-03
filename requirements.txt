@@ -1,0 +1,4 @@
+Django==5.0.6
+djangorestframework==3.15.1
+djoser==2.2.2
+pillow==10.3.0
