@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from bank.models import Customer
+from .models import Customer, Account
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -15,4 +15,11 @@ class CustomerSerializer(serializers.ModelSerializer):
         return super(CustomerSerializer, self).create(validated_data)
 
 
+class AccountSerializer(serializers.ModelSerializer):
+    actions = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = Account
+        fields = ('id', 'balance', 'actions')
+        read_only_fields = ('id', 'balance', 'actions')
 
