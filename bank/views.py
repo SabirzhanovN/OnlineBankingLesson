@@ -1,11 +1,12 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
 from rest_framework import mixins
+from rest_framework.response import Response
 
-from .models import Customer, Account
-from .serializers import CustomerSerializer, AccountSerializer
+from .models import Customer, Account, Action
+from .serializers import CustomerSerializer, AccountSerializer, ActionSerializer
 
 
 class CustomerList(generics.ListCreateAPIView):
@@ -81,3 +82,41 @@ class AccountViewSet(viewsets.GenericViewSet,
         Return object for current authenticated user only
         """
         return self.queryset.filter(user=self.request.user)
+
+
+class ActionViewSet(viewsets.GenericViewSet,
+                    mixins.ListModelMixin,
+                    mixins.CreateModelMixin):
+    serializer_class = ActionSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Action.objects.all()
+
+    def get_queryset(self):
+        """
+        Return Action objects for current authenticated user only.
+        """
+        accounts = Account.objects.filter(user=self.request.user)
+
+        return self.queryset.filter(account__in=accounts)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Checks if requested account belongs to user.
+        try:
+            account = Account.objects.filter(user=self.request.user).get(pk=self.request.data['account'])
+        except Exception as e:
+            print(e)
+
+            content = {'Error': 'No such account!'}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save(account=account)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+

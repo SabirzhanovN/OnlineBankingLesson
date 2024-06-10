@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 
 
 class Customer(models.Model):
@@ -49,3 +49,38 @@ class Action(models.Model):
 
     def __str__(self):
         return f'Account number {self.account.id} was changed on {str(self.amount)}'
+
+
+class Transaction(models.Model):
+    amount = models.DecimalField(
+        max_digits=11,
+        decimal_places=2
+    )
+    date = models.DateTimeField(auto_now=True)
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.CASCADE
+    )
+    merchant = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"Account number {self.account.id} send {str(self.amount)} to {self.merchant}"
+
+    @classmethod
+    def make_transaction(cls, amount, account, merchant):
+        if account.balance < amount:
+            raise (ValueError('Not enough money!'))
+
+        with transaction.atomic():
+            account -= amount
+            account.save()
+            tran = cls.objects.create(
+                amount=amount,
+                account=account,
+                merchant=merchant
+            )
+
+            return account, tran
+
+
+

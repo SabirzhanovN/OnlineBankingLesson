@@ -7,6 +7,7 @@ router = DefaultRouter()
 
 router.register('customer', views.CustomerViewSet)
 router.register('account', views.AccountViewSet)
+router.register('action', views.ActionViewSet)
 
 urlpatterns = [
     # path('customer-list/', views.CustomerList.as_view(), name='customer-list'),

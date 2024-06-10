@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Customer, Account
+from .models import Customer, Account, Action
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -22,4 +22,28 @@ class AccountSerializer(serializers.ModelSerializer):
         model = Account
         fields = ('id', 'balance', 'actions')
         read_only_fields = ('id', 'balance', 'actions')
+
+
+class ActionSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super(ActionSerializer, self).__init__(*args, **kwargs)
+        if 'request' in self.context:
+            self.fields['account'].queryset = self.fields['account'].queryset.filter(user=self.context['view'].request.user)
+
+    class Meta:
+        model = Action
+        fields = ('id', 'account', 'amount', 'date')
+        read_only_fields = ('id', 'date')
+
+    def create(self, validated_data):
+        print(validated_data['amount'])
+        if validated_data['account'].balance + validated_data['amount'] > 0:
+            validated_data['account'].balance += validated_data['amount']
+            validated_data['account'].save()
+        else:
+            raise serializers.ValidationError(
+                ('Not enough money')
+            )
+        return super(ActionSerializer, self).create(validated_data)
+
 
