@@ -5,8 +5,8 @@ from rest_framework import viewsets
 from rest_framework import mixins
 from rest_framework.response import Response
 
-from .models import Customer, Account, Action
-from .serializers import CustomerSerializer, AccountSerializer, ActionSerializer
+from .models import Customer, Account, Action, Transaction
+from .serializers import CustomerSerializer, AccountSerializer, ActionSerializer, TransactionSerializer
 
 
 class CustomerList(generics.ListCreateAPIView):
@@ -119,4 +119,41 @@ class ActionViewSet(viewsets.GenericViewSet,
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
+class TransactionViewSet(viewsets.GenericViewSet,
+                         mixins.ListModelMixin,
+                         mixins.CreateModelMixin,
+                         mixins.RetrieveModelMixin):
+    serializer_class = TransactionSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Transaction.objects.all()
+
+    def get_queryset(self):
+        """
+        Return Action objects for current authenticated user only.
+        """
+        accounts = Account.objects.filter(user=self.request.user)
+
+        return self.queryset.filter(account__in=accounts)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            account = Account.objects.filter(user=self.request.user).get(pk=self.request.data['account'])
+        except Exception as e:
+            content = {'Error': 'Not such account'}
+            return Response(content, status.HTTP_400_BAD_REQUEST)
+
+        serializer.save(account=account)
+
+        try:
+            Transaction.make_transaction(**serializer.validated_data)
+        except ValueError:
+            content = {'Error': 'Not enough money!'}
+            return Response(content, status.HTTP_400_BAD_REQUEST)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status.HTTP_201_CREATED, headers=headers)
 

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Customer, Account, Action
+from .models import Customer, Account, Action, Transaction
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -47,3 +47,13 @@ class ActionSerializer(serializers.ModelSerializer):
         return super(ActionSerializer, self).create(validated_data)
 
 
+class TransactionSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super(TransactionSerializer, self).__init__(*args, **kwargs)
+        if 'request' in self.context:
+            self.fields['account'].queryset = self.fields['account'].queryset.filter(user=self.context['view'].request.user)
+
+    class Meta:
+        model = Transaction
+        fields = ('id', 'account', 'date', 'merchant', 'amount')
+        read_only_fields = ('id',)

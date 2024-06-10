@@ -72,7 +72,7 @@ class Transaction(models.Model):
             raise (ValueError('Not enough money!'))
 
         with transaction.atomic():
-            account -= amount
+            account.balance -= amount
             account.save()
             tran = cls.objects.create(
                 amount=amount,
