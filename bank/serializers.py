@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Customer, Account, Action, Transaction
+from .models import Customer, Account, Action, Transaction, Transfer
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -57,3 +57,26 @@ class TransactionSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = ('id', 'account', 'date', 'merchant', 'amount')
         read_only_fields = ('id',)
+
+
+class TransferSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super(TransferSerializer, self).__init__(*args, **kwargs)
+        if 'request' in self.context:
+            self.fields['from_account'].queryset = self.fields['from_account'].queryset.filter(user=self.context['view'].request.user)
+
+    to_account = serializers.CharField()
+
+    def validate(self, data):
+        try:
+            data['to_account'] = Account.objects.get(pk=data['to_account'])
+        except Exception as e:
+            print(e)
+            raise serializers.ValidationError("No such account from serializer")
+
+        return data
+
+    class Meta:
+        model = Transfer
+        fields = ('id', 'from_account', 'to_account', 'amount')
+        read_only_fields = ('id', )

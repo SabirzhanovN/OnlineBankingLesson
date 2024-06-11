@@ -83,4 +83,18 @@ class Transaction(models.Model):
             return account, tran
 
 
-
+class Transfer(models.Model):
+    from_account = models.ForeignKey(
+        Account,
+        on_delete=models.CASCADE,
+        related_name='from_account'
+    )
+    to_account = models.ForeignKey(
+        Account,
+        on_delete=models.CASCADE,
+        related_name='to_account'
+    )
+    amount = models.DecimalField(
+        max_digits=11,
+        decimal_places=2
+    )

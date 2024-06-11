@@ -5,8 +5,10 @@ from rest_framework import viewsets
 from rest_framework import mixins
 from rest_framework.response import Response
 
-from .models import Customer, Account, Action, Transaction
-from .serializers import CustomerSerializer, AccountSerializer, ActionSerializer, TransactionSerializer
+from .models import Customer, Account, Action, Transaction, Transfer
+from .serializers import CustomerSerializer, AccountSerializer, ActionSerializer, TransactionSerializer, \
+    TransferSerializer
+from .service import make_transfer
 
 
 class CustomerList(generics.ListCreateAPIView):
@@ -157,3 +159,33 @@ class TransactionViewSet(viewsets.GenericViewSet,
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status.HTTP_201_CREATED, headers=headers)
 
+
+class TransferViewSet(viewsets.GenericViewSet,
+                      mixins.CreateModelMixin,
+                      mixins.ListModelMixin,
+                      mixins.RetrieveModelMixin):
+    serializer_class = TransferSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    queryset = Transfer.objects.all()
+
+    def get_queryset(self):
+        """
+        Return Action objects for current authenticated user only.
+        """
+        accounts = Account.objects.filter(user=self.request.user)
+
+        return self.queryset.filter(from_account__in=accounts)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            make_transfer(**serializer.validated_data)
+        except ValueError:
+            content = {'error': 'Not enough money!'}
+            return Response(content, status=status.HTTP_400_BAD_REQUEST)
+
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status.HTTP_201_CREATED, headers=headers)
