@@ -34,7 +34,12 @@ INSTALLED_APPS = [
     # packages
     'rest_framework',
     'rest_framework.authtoken',
-    'djoser'
+    'djoser',
+
+    # ModuleNotFoundError: No module named 'pkg_resources':
+    # $ pip install --upgrade setuptools
+    # $ pip install --upgrade distribute
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
